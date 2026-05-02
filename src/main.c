@@ -7,16 +7,25 @@
 
 #include "parser.h"
 
-#define USAGE_MSG "Usage: far [OPERATION] [IN] -o [OUT]\n"                          \
+#define USAGE_MSG "Usage: far [OPERATION] [IN] -o [OUT]\n"                               \
                   "Try 'far --help' for more information\n"
 
-#define HELP_MSG  "Usage: far [OPERATION] [IN] -o [OUT]\n"                          \
-                  "Read and write far archives.\n"                                  \
-                  "\n"                                                              \
-                  "OPERATIONS:\n"                                                   \
-                  "\t-x    extract archive IN ('%%' for stdin), into new dir OUT\n" \
-                  "\t-p    pack dir IN into archive OUT ('%%' for stdout)\n"        \
-                  "\t-l    list all items in IN ('%%' for stdin) (do not pass -o)\n"
+#define HELP_MSG  "Usage: far [OPERATION] [IN] -o [OUT]\n"                               \
+                  "Read and write far archives.\n"                                       \
+                  "\n"                                                                   \
+                  "\t--help     show this message and exit\n"                            \
+                  "\t--version  show version number and license, and exit\n"             \
+                  "\n"                                                                   \
+                  "OPERATIONS:\n"                                                        \
+                  "\t-x         extract archive IN ('%%' for stdin), into new dir OUT\n" \
+                  "\t-p         pack dir IN into archive OUT ('%%' for stdout)\n"        \
+                  "\t-l         list all items in IN ('%%' for stdin) (do not pass -o)\n"
+
+#define VERSN_MSG "far (File ARchiver) version 0.1.1\n"                                  \
+                  "Licensed under the FOSS MIT license.\n"                               \
+                  "\n"                                                                   \
+                  "Written by Beau Constrictor; see\n"                                   \
+                  "<https://github.com/beauconstrictor/far>\n"
 
 typedef enum {
   op_extract,
@@ -227,6 +236,11 @@ void parse_args(int argc, char *argv[], char *input, char *output,
     t_op *operation) {
   if (argc == 2 && strcmp(argv[1], "--help") == 0) {
     printf(HELP_MSG);
+    exit(0);
+  }
+
+  if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+    printf(VERSN_MSG);
     exit(0);
   }
 
