@@ -13,14 +13,15 @@ you need is `far --help` to learn everything.
 `far` uses the FAR (`*.far`) file format for achiving. 
 
 The FAR format is excellent for sending data to embedded devices
-where the C library makes it incredibly easy to write a parse
+where the C library makes it incredibly easy to write a parser
 on-device that can read from a serial port. Of course, the CLI tool
 natively supports outputting archives over stdout which you can
 trivially redirect to a device.
 
 FAR is an incredibly effective format for data streams and
 can be parsed while not even loading a single full file into
-memory. However, FAR does
+memory. However, FAR does not have redundancy or error checking, so
+that must be implemented on another layer.
 
 # Breakdown
 
