@@ -42,7 +42,9 @@ Entries are structured like this:
 Permissions are formatted as in `ls`, where the first character
 represents the type of the entry:
 
-* `-` - File * `d` - Directory * `l` - Symlink
+* `-` - File
+* `d` - Directory
+* `l` - Symlink
 
 Next, the 3-character octal permissions, using ASCII digits.
 
