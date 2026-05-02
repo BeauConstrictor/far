@@ -48,12 +48,14 @@ t_entry *read_entry(FILE *archive, far_errno *errnum) {
   t_entry *entry = malloc(sizeof(t_entry));
   if (!entry) {
     give_err(errnum, far_malloc_fail);
+    free_entry(entry);
     return NULL;
   }
 
   entry->name = malloc(PATH_MAX);
   if (!entry->name) {
     give_err(errnum, far_malloc_fail);
+    free_entry(entry);
     return NULL;
   }
   read_str(archive, PATH_MAX, entry->name);
@@ -63,27 +65,34 @@ t_entry *read_entry(FILE *archive, far_errno *errnum) {
   int type = fgetc(archive);
   if (type == EOF) {
     give_err(errnum, far_bad_eof);
+    free_entry(entry);
     return NULL;
   }
   entry->type = (char)type;
 
   char permission_str[4];
   n = fread(permission_str, 1, 3, archive);
-  if (n != 3) 
+  if (n != 3) {
+    give_err(errnum, far_bad_eof);
+    free_entry(entry);
+    return NULL;
+  }
   permission_str[3] = '\0';
   entry->permissions = strtol(permission_str, NULL, 8);
 
   entry->size = read_int(archive);
 
   void *data = malloc(entry->size);
-  if (!entry->name) {
+  if (!data) {
     give_err(errnum, far_malloc_fail);
+    free_entry(entry);
     return NULL;
   }
   entry->data = data;
   n = fread(data, 1, entry->size, archive);
   if (n != (size_t)entry->size) {
     give_err(errnum, far_bad_eof);
+    free_entry(entry);
     return NULL;
   }
 
@@ -167,7 +176,7 @@ bool verify_archive(FILE *archive) {
 bool more_entries_exist(FILE *archive) {
     int c = fgetc(archive);
     if (c == EOF) return false;
-    ungetc((char)c, archive);
+    if (ungetc((char)c, archive) == EOF) return false;
     return true;
 }
 
