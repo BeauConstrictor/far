@@ -18,7 +18,8 @@ build/far: build/main.o build/parser.o
 .PHONY: all run dbg clean
 
 run: build/far
-	./build/far -l test.far
+	./build/far -p . -o test.far
+	rm test.far
 
 dbg: build/far
 	gdb --args ./build/far -l example.far

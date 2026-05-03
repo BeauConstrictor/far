@@ -21,7 +21,7 @@
                   "\t-p         pack dir IN into archive OUT ('%%' for stdout)\n"        \
                   "\t-l         list all items in IN ('%%' for stdin) (do not pass -o)\n"
 
-#define VERSN_MSG "far (File ARchiver) version 0.1.1\n"                                  \
+#define VERSN_MSG "far (File ARchiver) version 0.2.0\n"                                  \
                   "Licensed under the FOSS MIT license.\n"                               \
                   "\n"                                                                   \
                   "Written by Beau Constrictor; see\n"                                   \
@@ -116,6 +116,50 @@ void join_path(char *buf, size_t n, const char *a, const char *b) {
     snprintf(buf, n, "%s/%s", a, b);
 }
 
+// path must start with /
+bool detect_path_traversal(const char *_path) {
+  char *path = strdup(_path);
+  if (path == NULL) return true; // bad idea?
+  size_t len = strlen(path);
+  char *s;
+
+  // first, check for *..
+  if (len >= 2 && strcmp(path + len-2, "..") == 0) {
+    free(path);
+    return true;
+  }
+
+  // next, if on windows, replace \\ with /
+  // NOTE: this program doesn't really support windows, but just in
+  // case someone compiles it for windows, i wouldn.t want this
+  // vulnerability sneaking through.
+  #ifdef _WIN32
+    s = path;
+    while (*s) {
+      if (*s == '\\') *s = '/';
+      s++;
+    }
+  #endif
+
+  // finally, check for *../*
+  s = path;
+  const char pattern[] = "../";
+  int match = 0;
+  while (*s) {
+    if (*s == pattern[match]) {
+      match++;
+      if (match == sizeof(pattern)-1) {
+        free(path);
+        return true;
+      }
+    }
+    s++;
+  }
+  
+  free(path);
+  return false;
+}
+
 void extract_archive(FILE *archive, const char *output) {
   if (dir_exists(output)) err_msg("directory exists");
   mkdir(output, 0755);
@@ -125,9 +169,14 @@ void extract_archive(FILE *archive, const char *output) {
     t_entry *entry = read_entry(archive, &errnum);
     if (errnum) err_msg_far(errnum);
 
-    // TODO: PATH TRAVERSAL VULN!!
     char outpth[PATH_MAX];
     join_path(outpth, sizeof(outpth), output, entry->name);
+    if (detect_path_traversal(outpth)) {
+      fprintf(stderr, "potential dangerous path encountered; file "
+                      "'%s' skipped.\n", outpth);
+      free_entry(entry);
+      continue;
+    }
 
     switch (entry->type) {
       case file_entry:
@@ -135,16 +184,25 @@ void extract_archive(FILE *archive, const char *output) {
         if (f == NULL) perr_msg();
         fwrite(entry->data, 1, entry->size, f);
         fclose(f);
+        chmod(outpth, entry->permissions);
         break;
 
       case directory_entry:
         mkdir(outpth, 0755);
+        chmod(outpth, entry->permissions);
         break;
 
       case symlink_entry:
-        printf("|-> symlinks are currently unsupported.\n");
+        fprintf(stderr, "symlinks are currently unsupported.\n");
         break;
+
+      default:
+        fprintf(stderr, "unknown entry type encountered.\n");
     }
+
+    // non-error text still goes to stderr in case they are writing
+    // the archive to stdout.
+    fprintf(stderr, "%s\n", entry->name);
 
     free_entry(entry);
   }
@@ -158,7 +216,6 @@ void pack_recurse(const char *base, const char *path, FILE *archive) {
     }
 
     struct dirent *entry;
-
 
     while ((entry = readdir(dir)) != NULL) {
         if (strcmp(entry->d_name, ".") == 0 ||
@@ -179,6 +236,7 @@ void pack_recurse(const char *base, const char *path, FILE *archive) {
 
         char name[PATH_MAX];
         join_path(name, sizeof(name), base, entry->d_name);
+        fprintf(stderr, "%s\n", name);
 
         if (S_ISDIR(st.st_mode)) {
           t_entry *arch_entry = create_entry(
